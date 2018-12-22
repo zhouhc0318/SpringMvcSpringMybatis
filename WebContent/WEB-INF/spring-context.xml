@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+       					http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                        http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context-3.1.xsd
+                        http://www.springframework.org/schema/mvc
+                        http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd">
+    <context:component-scan base-package="com.zh" />
+    <!--导入配置文件-->
+    <bean id="mysqlSource" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:jdbcConfig.properties"></property>
+    </bean>
+    <!-- 动态配置数据源开始 -->
+    <!-- 启动AspectJ支持 -->
+	<aop:aspectj-autoproxy proxy-target-class="true" />
+    <bean id="mysqlDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${classDriverName}" />
+        <property name="url" value="${url}" />
+        <property name="username" value="${username}" />
+        <property name="password" value="${password}" />
+    </bean>
+    
+    <bean id="oracleDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${classDriverName2}" />
+        <property name="url" value="${url2}" />
+        <property name="username" value="${username2}" />
+        <property name="password" value="${password2}" />
+    </bean>  
+    
+    <!-- <bean id="oracleDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="oracle.jdbc.driver.OracleDriver"></property>
+        <property name="url" value="jdbc:oracle:thin:@localhost:1521:orcl"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="admin"></property>
+    </bean>  -->   
+    
+     
+    
+    <bean id="dataSource" class="com.zh.util.datasource.DynamicDataSource">
+    	<property name="targetDataSources">
+    		<map key-type="java.lang.String">
+    			<entry key="mysqlDataSource" value-ref="mysqlDataSource"/>
+    			<entry key="oracleDataSource" value-ref="oracleDataSource"/>
+    		</map>
+    	</property>
+    	<property name="defaultTargetDataSource" ref="mysqlDataSource"></property>
+    </bean>    
+    <!-- 动态配置数据源结束 -->
+
+    <!--spring mybatis的整合-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mapperLocations" value="classpath:*.xml" />
+    </bean>
+
+    <!-- DAO接口所在包名，Spring会自动查找其下的类 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.zh.dao" />
+        <!--这里就是value，不要有疑问，真的-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+    </bean>
+
+    <!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+</beans>
